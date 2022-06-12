@@ -11,7 +11,6 @@ app.use('/auth', loginController)
 app.use('/notes', notesController)
 
 
-
 const httpServer = http.createServer(app)
 
 

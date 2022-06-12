@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const user = {}
+const user = require('../models/user.js')
 
 router.get('/', (req, res) => {
     console.log('Hola Andre login funcionando')
