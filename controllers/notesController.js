@@ -1,10 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const user = require("../models/user.js");
+const note = require("../models/note.js");
+const auth = require('../middlewares/auth.js')
+// const user = require("../models/user.js");
+
+router.use('/', auth)
 
 //Ver su listado de notas (en el listado sólo se ven los títulos)
-router.get("/", (req, res) => {
-  let notes = user.notes;
+router.get("/", async (req, res) => {
+  const userId = req.user._id
+  const notes = await note.findByUser(userId);
   let formattedNotes = notes.map((note) => {
     return { id: note.id, titulo: note.titulo };
   });
@@ -12,38 +17,35 @@ router.get("/", (req, res) => {
 });
 
 //Crear una nota: título, texto y categoría única (fijas).
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
 
-  let { titulo, texto, categoria } = req.body;
-    let newNote = {
-        id: Date.now(),
-        titulo,
-        texto,
-        categoria,
-      }
-  user.notes.push(newNote);
+  const { titulo, texto, categoria } = req.body;
+  const userId = req.user._id;
+  let savedNote = note.save(userId, titulo, texto, categoria);
 
-  res.send({ notas: [newNote] });
+  if (!savedNote) throw Error('fallo el guardado')
+  res.send({ notas: [savedNote] });
 });
 
 //Visualizar una nota
-router.get("/:noteId", (req, res) => {
-  let filteredNotes = user.notes.filter((note) => note.id == req.params.noteId);
-  res.send({ notas: filteredNotes });
+router.get("/:noteId", async (req, res) => {
+  const noteFromDb = await note.findById(req.params.noteId)
+  if (!noteFromDb) throw Error('nota no encontrada')
+  res.send({ notas: [noteFromDb] });
 });
 
 //Modificar sus notas: título, texto y categoría
-router.patch("/:noteId", (req, res) => {
-  //buscar la nota
-  let idx = user.notes.findIndex((note) => note.id == req.params.noteId);
-  let { id, ...otrosAtributos } = req.body;
+router.patch("/:noteId", async (req, res) => {
+  const { id, ...otrosAtributos } = req.body;
+  const userId = req.user._id;
+  const updatedNote = await note.update(
+    {
+      id: note.id,
+      ...otrosAtributos,
+    },
+    userId)
 
-  user.notes[idx] = {
-    id: note.id,
-    ...otrosAtributos,
-  };
-
-  res.send({ notas: [user.notes[idx]] });
+  res.send({ notas: [updatedNote] });
 });
 
 module.exports = router;
